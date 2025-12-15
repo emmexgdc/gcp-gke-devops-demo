@@ -70,12 +70,10 @@ jobs:
 
       - name: Deploy manifests (staging)
         run: |
-          kubectl apply -k k8s/overlays/staging
-
-      - name: Set image to this commit SHA
-        run: |
-          kubectl -n "${{ env.NAMESPACE }}" set image deployment/py-api py-api="${{ env.IMAGE_NAME }}"
-          kubectl -n "${{ env.NAMESPACE }}" rollout status deployment/py-api --timeout=180s
+          cd k8s/overlays/staging
+          kustomize edit set image IMAGE_PLACEHOLDER="${{ vars.AR_REPO }}/py-api:${{ github.sha }}"
+          kubectl apply -k .
+          kubectl -n staging rollout status deployment/py-api --timeout=300s
 
       - name: Show service status
         run: |
