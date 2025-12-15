@@ -43,10 +43,24 @@ jobs:
 
       - name: Build & Push image
         run: |
-          IMAGE="${{ secrets.AR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          docker build -t "$IMAGE" ./app
-          docker push "$IMAGE"
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+          # Define variables
+          REPO="${{ secrets.AR_REPO }}"
+          IMAGE_NAME="${{ env.IMAGE_NAME }}"
+          SHA_TAG="${REPO}/${IMAGE_NAME}:${{ github.sha }}"
+          LATEST_TAG="${REPO}/${IMAGE_NAME}:latest"
+
+          # Build
+          docker build -t "$SHA_TAG" ./app
+          
+          # Add the 'latest' tag
+          docker tag "$SHA_TAG" "$LATEST_TAG"
+
+          # Push both
+          docker push "$SHA_TAG"
+          docker push "$LATEST_TAG"
+
+          # Save SHA tag for the next steps
+          echo "IMAGE=$SHA_TAG" >> $GITHUB_ENV
 
       - name: Get GKE credentials
         run: |
