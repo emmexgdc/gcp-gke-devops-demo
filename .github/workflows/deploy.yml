@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Auth to Google Cloud (OIDC)
-      - uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_DEPLOY_SA }}
@@ -59,7 +59,7 @@ jobs:
 
       - name: Set image to this commit SHA
         run: |
-          kubectl -n "${{ env.NAMESPACE }}" set image deployment/py-api py-api="${{ env.IMAGE }}"
+          kubectl -n "${{ env.NAMESPACE }}" set image deployment/py-api py-api="${{ env.IMAGE_NAME }}"
           kubectl -n "${{ env.NAMESPACE }}" rollout status deployment/py-api --timeout=180s
 
       - name: Show service status
