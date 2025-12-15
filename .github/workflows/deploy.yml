@@ -1,0 +1,67 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      CLUSTER_NAME: py-gke-demo
+      NAMESPACE: staging
+      IMAGE_NAME: py-api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Auth to Google Cloud (OIDC)
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build & Push image
+        run: |
+          IMAGE="${{ secrets.AR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          docker build -t "$IMAGE" ./app
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials "${{ env.CLUSTER_NAME }}" \
+            --region "${{ secrets.GCP_REGION }}" \
+            --project "${{ secrets.GCP_PROJECT_ID }}"
+
+      - name: Deploy manifests (staging)
+        run: |
+          kubectl apply -k k8s/overlays/staging
+
+      - name: Set image to this commit SHA
+        run: |
+          kubectl -n "${{ env.NAMESPACE }}" set image deployment/py-api py-api="${{ env.IMAGE }}"
+          kubectl -n "${{ env.NAMESPACE }}" rollout status deployment/py-api --timeout=180s
+
+      - name: Show service status
+        run: |
+          kubectl -n "${{ env.NAMESPACE }}" get deploy,po,svc -o wide

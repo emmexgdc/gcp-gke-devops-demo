@@ -1,0 +1,19 @@
+namespace: dev
+
+resources:
+  - ../../base
+  - namespace.yaml
+
+images:
+  - name: IMAGE_PLACEHOLDER
+    newName: REPLACE_WITH_AR_IMAGE
+    newTag: latest
+
+patches:
+  - target:
+      kind: ConfigMap
+      name: py-api-config
+    patch: |-
+      - op: replace
+        path: /data/APP_VERSION
+        value: "dev"

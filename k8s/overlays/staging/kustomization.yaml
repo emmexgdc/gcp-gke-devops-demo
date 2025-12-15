@@ -1,0 +1,19 @@
+namespace: staging
+
+resources:
+  - ../../base
+  - namespace.yaml
+
+images:
+  - name: IMAGE_PLACEHOLDER
+    newName: europe-west1-docker.pkg.dev/python-481318/py-api/py-api
+    newTag: latest
+
+patches:
+  - target:
+      kind: ConfigMap
+      name: py-api-config
+    patch: |-
+      - op: replace
+        path: /data/APP_VERSION
+        value: "staging"
